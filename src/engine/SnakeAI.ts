@@ -238,7 +238,8 @@ export class SnakeAI {
 
     const moves: Point[] = [];
     // Tail is safe to step onto IF it will move away on next tick
-    const safeTail = body.length > 1 ? body[body.length - 1] : null;
+    // Strict safety: every current body cell, including the tail, is forbidden.
+    // This sacrifices an occasional shortcut but guarantees the AI never intentionally touches itself.
 
     for (const d of deltas) {
       const nx = head.x + d.x;
@@ -250,20 +251,8 @@ export class SnakeAI {
       // Not stepping backwards onto neck
       if (neck && nx === neck.x && ny === neck.y) continue;
 
-      // Check collision with body
-      let collides = false;
-      for (let i = 0; i < body.length - 1; i++) {
-        if (body[i].x === nx && body[i].y === ny) {
-          collides = true;
-          break;
-        }
-      }
-
-      // Check tail exception
-      if (safeTail && nx === safeTail.x && ny === safeTail.y) {
-        // If snake length is >= 3, stepping on tail is usually safe
-        collides = false;
-      }
+      // Strict collision check against the entire body.
+      const collides = body.some(segment => segment.x === nx && segment.y === ny);
 
       if (!collides) {
         moves.push({ x: nx, y: ny });
