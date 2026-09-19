@@ -1,5 +1,5 @@
 import type { VisionDetection,BotGiftId } from './types';
-const gifts:Record<BotGiftId,string>={rose:'Rosa',doughnut:'Rosquinha',heart_me:'Heart Me',galaxy:'Galáxia'};
+const gifts:Record<BotGiftId,string>={rose:'Rosa',doughnut:'Rosquinha',heart_me:'Heart Me',finger_heart:'Finger Heart',perfume:'Perfume',confetti:'Confete',rocket:'Foguete',lion:'Leão',galaxy:'Galáxia'};
 export class GiftDetector {
   readonly threshold=.85;
   // Receives evidence from a real vision provider. It never invents detections from pixels.

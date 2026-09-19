@@ -1,3 +1,3 @@
-export type BotGiftId='rose'|'doughnut'|'heart_me'|'galaxy';
+export type BotGiftId='rose'|'doughnut'|'heart_me'|'finger_heart'|'perfume'|'confetti'|'rocket'|'lion'|'galaxy';
 export interface VisionDetection { giftId:BotGiftId; giftName:string; username:string; displayName:string; avatar:string; repeatCount:number; confidence:number; fingerprint:string; }
 export interface BotStats { totalEvents:number; ignored:number; duplicates:number; lastGift?:VisionDetection; }
