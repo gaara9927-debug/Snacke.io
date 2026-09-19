@@ -9,6 +9,7 @@ import { BottomHud } from './components/BottomHud';
 import { GiftNotificationBanner } from './components/GiftNotificationBanner';
 import { ThankYouToast } from './components/ThankYouToast';
 import { TikTokLoginModal } from './components/TikTokLoginModal';
+import { ManualEventsPanel } from './components/ManualEventsPanel';
 import { GiftEventPayload, LiveInfo } from './types';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
   const [latestGiftReceived, setLatestGiftReceived] = useState<GiftEventPayload | null>(null);
   const [isTikTokLoginOpen, setIsTikTokLoginOpen] = useState(false);
   const [showAiVision, setShowAiVision] = useState(true);
+  const [manualEventsOpen, setManualEventsOpen] = useState(false);
 
   // WebSocket connection & synchronization
   const handleWsEvent = useCallback((type: string, data: any) => {
@@ -93,7 +95,7 @@ export default function App() {
   }, [engine]);
 
   return (
-    <div className="min-h-screen bg-[#07080c] text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="min-h-screen bg-transparent text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
       {/* 1. Header with TikTok live status & controls */}
       <LiveHeader
         liveInfo={gameState.liveInfo}
@@ -137,6 +139,9 @@ export default function App() {
           liveLogs={gameState.liveLogs}
         />
       </main>
+
+      <button onClick={() => setManualEventsOpen(true)} className="fixed bottom-20 right-4 z-40 rounded-full bg-emerald-500 text-zinc-950 font-black px-4 py-3 shadow-xl shadow-emerald-950/40">🎁 Eventos</button>
+      <ManualEventsPanel open={manualEventsOpen} onClose={() => setManualEventsOpen(false)} />
 
       {/* 3. Bottom HUD Status & Multipliers (MAÇÃS, TAMANHO, PONTUAÇÃO, EVENTO ATIVO) */}
       <BottomHud

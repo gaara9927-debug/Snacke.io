@@ -1,5 +1,6 @@
 import express from 'express';
 import http from 'http';
+import crypto from 'crypto';
 import path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer as createViteServer } from 'vite';
@@ -12,7 +13,7 @@ const PORT = 3000;
 const app = express();
 const server = http.createServer(app);
 
-app.use(express.json());
+app.use(express.json({ limit: '256kb' }));
 
 const tiktokService = new TikTokLiveService();
 
@@ -129,31 +130,33 @@ app.get('/api/tiktok/status', async (req, res) => {
   }
 });
 
-// Safe TikTok account login / session configuration for rainz878
-app.post('/api/tiktok/login', async (req, res) => {
+// TikTok Login Kit OAuth. Secrets stay server-side.
+app.get('/api/tiktok/auth', (req, res) => {
+  const clientKey = process.env.TIKTOK_CLIENT_KEY;
+  const redirectUri = process.env.TIKTOK_REDIRECT_URI;
+  if (!clientKey || !redirectUri) return res.status(503).json({ error: 'TikTok Login Kit não configurado' });
+  const state = crypto.randomUUID();
+  res.cookie?.('tiktok_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 600000 });
+  const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
+  url.searchParams.set('client_key', clientKey);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', 'user.info.basic');
+  url.searchParams.set('redirect_uri', redirectUri);
+  url.searchParams.set('state', state);
+  res.redirect(url.toString());
+});
+
+app.get('/api/tiktok/callback', async (req, res) => {
   try {
-    const { sessionId, apiKey } = req.body;
-    const result = tiktokService.updateCredentials(sessionId, apiKey);
-    const newStatus = await tiktokService.checkLiveStatus();
-
-    // Broadcast updated status to all active WebSocket clients
-    broadcast('live_status', newStatus);
-    broadcast('connection_status', {
-      connected: true,
-      target: tiktokService.getTargetUsername(),
-      isConfigured: result.isConfigured,
-    });
-
-    res.json({
-      success: true,
-      targetUsername: tiktokService.getTargetUsername(),
-      isConfigured: result.isConfigured,
-      status: newStatus.status,
-      statusMessage: newStatus.statusMessage,
-    });
+    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    if (!code) return res.status(400).send('Código OAuth ausente.');
+    await tiktokService.exchangeCode(code);
+    const status = await tiktokService.checkLiveStatus();
+    broadcast('live_status', status);
+    res.redirect('/?tiktok=connected');
   } catch (error: any) {
-    console.error('Erro ao configurar login TikTok:', error?.message || error);
-    res.status(500).json({ success: false, error: 'Falha ao salvar sessão no backend' });
+    console.error('TikTok OAuth:', error?.message || error);
+    res.redirect('/?tiktok=error');
   }
 });
 
@@ -177,6 +180,20 @@ app.post('/api/tiktok/webhook', (req, res) => {
     processed: true,
     eventId: result.payload?.eventId,
   });
+});
+
+// Manual LIVE control: use this when events are entered by the streamer/operator.
+app.post('/api/manual/gift', (req, res) => {
+  const { giftId, repeatCount = 1, username = 'apoiador', displayName, avatar = '' } = req.body || {};
+  const result = tiktokService.validateAndProcessEvent({
+    eventId: `manual-${crypto.randomUUID()}`,
+    giftId,
+    repeatCount,
+    user: { id: `manual-${String(username).slice(0,64)}`, username, displayName: displayName || username, avatar },
+  });
+  if (!result.processed || !result.payload) return res.status(400).json({ ok: false, reason: result.reason || 'invalid_gift' });
+  broadcast('gift_received', result.payload);
+  res.json({ ok: true, event: result.payload });
 });
 
 // ================= VITE / STATIC SERVING ================= //

@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+:root { color-scheme: dark; background:#05070b; }
+html, body, #root { min-height:100%; margin:0; }
+body {
+  overflow-x:hidden;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(16,185,129,.12), transparent 28rem),
+    radial-gradient(circle at 85% 18%, rgba(14,165,233,.10), transparent 32rem),
+    linear-gradient(160deg,#05070b 0%,#090d14 50%,#050609 100%);
+}
+body::before {
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.22;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:32px 32px; mask-image:linear-gradient(to bottom,black,transparent 85%);
+}
+* { box-sizing:border-box; }
+button { -webkit-tap-highlight-color:transparent; }
