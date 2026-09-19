@@ -1,0 +1,3 @@
+import {GiftDetector} from './GiftDetector';import {GiftDeduplicator} from './GiftDeduplicator';import {SnackeEventClient} from './SnackeEventClient';import type{BotStats}from'./types';
+export class SnackeLiveBot {detector=new GiftDetector();dedupe=new GiftDeduplicator();client=new SnackeEventClient();stats:BotStats={totalEvents:0,ignored:0,duplicates:0};
+async acceptVisionEvidence(raw:any){const d=this.detector.normalize(raw);if(!d){this.stats.ignored++;return false}if(this.dedupe.isDuplicate(d.fingerprint)){this.stats.duplicates++;return false}await this.client.send(d);this.stats.totalEvents++;this.stats.lastGift=d;return true}}

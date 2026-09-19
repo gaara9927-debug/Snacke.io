@@ -182,6 +182,24 @@ app.post('/api/tiktok/webhook', (req, res) => {
   });
 });
 
+// SNACKE LIVE BOT: accepts only high-confidence evidence produced by a configured vision detector.
+app.post('/api/bot/gift', (req, res) => {
+  const { giftId, username, displayName, avatar = '', repeatCount = 1, confidence, fingerprint = '' } = req.body || {};
+  const conf = Number(confidence);
+  if (!Number.isFinite(conf) || conf < 0.85) return res.status(422).json({ ok: false, reason: 'low_confidence' });
+  const safeUser = String(username || '').replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 64);
+  if (!safeUser) return res.status(400).json({ ok: false, reason: 'invalid_username' });
+  const result = tiktokService.validateAndProcessEvent({
+    eventId: `vision-${crypto.createHash('sha256').update(String(fingerprint || crypto.randomUUID())).digest('hex').slice(0,24)}`,
+    giftId: String(giftId || '').toLowerCase(),
+    repeatCount,
+    user: { id: `vision-${safeUser}`, username: safeUser, displayName: String(displayName || safeUser).slice(0,80), avatar: String(avatar).slice(0,2048) },
+  });
+  if (!result.processed || !result.payload) return res.status(200).json({ ok: false, reason: result.reason });
+  broadcast('gift_received', result.payload);
+  return res.json({ ok: true, event: result.payload, source: 'screen_vision', confidence: conf });
+});
+
 // Manual LIVE control: use this when events are entered by the streamer/operator.
 app.post('/api/manual/gift', (req, res) => {
   const { giftId, repeatCount = 1, username = 'apoiador', displayName, avatar = '' } = req.body || {};
