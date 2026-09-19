@@ -1,0 +1,7 @@
+{
+  "name": "Snake LIVE Autônoma",
+  "description": "Experiência de jogo Snake autônoma com IA de alta navegação, integração TikTok LIVE para @rainz878, eventos e presentes interativos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
