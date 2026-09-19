@@ -15,6 +15,14 @@ const server = http.createServer(app);
 
 app.use(express.json({ limit: '256kb' }));
 
+// Minimal cookie helpers for OAuth state. No dependency and no secret is exposed.
+function parseCookies(header?: string): Record<string, string> {
+  return Object.fromEntries(String(header || '').split(';').map(v => v.trim()).filter(Boolean).map(v => {
+    const i = v.indexOf('=');
+    return i < 0 ? [v, ''] : [v.slice(0, i), decodeURIComponent(v.slice(i + 1))];
+  }));
+}
+
 const tiktokService = new TikTokLiveService();
 
 // WebSocket Server attached to same HTTP server at /ws
@@ -136,7 +144,15 @@ app.get('/api/tiktok/auth', (req, res) => {
   const redirectUri = process.env.TIKTOK_REDIRECT_URI;
   if (!clientKey || !redirectUri) return res.status(503).json({ error: 'TikTok Login Kit não configurado' });
   const state = crypto.randomUUID();
-  res.cookie?.('tiktok_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 600000 });
+  const cookie = [
+    `tiktok_oauth_state=${encodeURIComponent(state)}`,
+    'HttpOnly',
+    'SameSite=Lax',
+    'Path=/',
+    'Max-Age=600',
+    ...(process.env.NODE_ENV === 'production' ? ['Secure'] : []),
+  ].join('; ');
+  res.setHeader('Set-Cookie', cookie);
   const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
   url.searchParams.set('client_key', clientKey);
   url.searchParams.set('response_type', 'code');
@@ -149,7 +165,21 @@ app.get('/api/tiktok/auth', (req, res) => {
 app.get('/api/tiktok/callback', async (req, res) => {
   try {
     const code = typeof req.query.code === 'string' ? req.query.code : '';
+    const returnedState = typeof req.query.state === 'string' ? req.query.state : '';
+    const expectedState = parseCookies(req.headers.cookie).tiktok_oauth_state || '';
+    const oauthError = typeof req.query.error === 'string' ? req.query.error : '';
+    const oauthDescription = typeof req.query.error_description === 'string' ? req.query.error_description : '';
+
+    if (oauthError) {
+      console.error('TikTok OAuth authorization error:', oauthError, oauthDescription);
+      return res.redirect('/?tiktok=error&reason=' + encodeURIComponent(oauthError));
+    }
     if (!code) return res.status(400).send('Código OAuth ausente.');
+    if (!returnedState || !expectedState || returnedState !== expectedState) {
+      console.error('TikTok OAuth: state inválido ou ausente.');
+      return res.redirect('/?tiktok=error&reason=invalid_state');
+    }
+    res.setHeader('Set-Cookie', 'tiktok_oauth_state=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0' + (process.env.NODE_ENV === 'production' ? '; Secure' : ''));
     await tiktokService.exchangeCode(code);
     const status = await tiktokService.checkLiveStatus();
     broadcast('live_status', status);
