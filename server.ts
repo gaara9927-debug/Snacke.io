@@ -182,6 +182,20 @@ app.post('/api/tiktok/webhook', (req, res) => {
   });
 });
 
+// Manual LIVE control: use this when events are entered by the streamer/operator.
+app.post('/api/manual/gift', (req, res) => {
+  const { giftId, repeatCount = 1, username = 'apoiador', displayName, avatar = '' } = req.body || {};
+  const result = tiktokService.validateAndProcessEvent({
+    eventId: `manual-${crypto.randomUUID()}`,
+    giftId,
+    repeatCount,
+    user: { id: `manual-${String(username).slice(0,64)}`, username, displayName: displayName || username, avatar },
+  });
+  if (!result.processed || !result.payload) return res.status(400).json({ ok: false, reason: result.reason || 'invalid_gift' });
+  broadcast('gift_received', result.payload);
+  res.json({ ok: true, event: result.payload });
+});
+
 // ================= VITE / STATIC SERVING ================= //
 
 async function start() {
