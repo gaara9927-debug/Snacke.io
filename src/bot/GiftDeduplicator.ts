@@ -1,0 +1,1 @@
+export class GiftDeduplicator { private seen=new Map<string,number>(); constructor(private cooldownMs=4500){} isDuplicate(key:string,now=Date.now()){for(const [k,t] of this.seen)if(now-t>this.cooldownMs)this.seen.delete(k);const t=this.seen.get(key);if(t&&now-t<this.cooldownMs)return true;this.seen.set(key,now);return false;} }
