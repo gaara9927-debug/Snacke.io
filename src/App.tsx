@@ -93,7 +93,7 @@ export default function App() {
   }, [engine]);
 
   return (
-    <div className="min-h-screen bg-[#07080c] text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="min-h-screen bg-transparent text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
       {/* 1. Header with TikTok live status & controls */}
       <LiveHeader
         liveInfo={gameState.liveInfo}
