@@ -121,6 +121,11 @@ export const GIFTS_CATALOG: GiftDefinition[] = [
     tier: 'medium',
     description: '+30 maçãs na arena',
   },
+  { id:'finger_heart', name:'Finger Heart', icon:'🫰', apples:10, tier:'small', description:'+10 maçãs na arena' },
+  { id:'perfume', name:'Perfume', icon:'🧴', apples:18, tier:'medium', description:'+18 maçãs na arena' },
+  { id:'confetti', name:'Confete', icon:'🎊', apples:22, eventTrigger:'rain', tier:'special', description:'Chuva festiva de maçãs' },
+  { id:'rocket', name:'Foguete', icon:'🚀', apples:60, eventTrigger:'turbo', tier:'special', description:'Turbo +60 maçãs' },
+  { id:'lion', name:'Leão', icon:'🦁', apples:80, eventTrigger:'invasion', tier:'large', description:'Invasão +80 maçãs' },
   {
     id: 'galaxy',
     name: 'Galáxia',
