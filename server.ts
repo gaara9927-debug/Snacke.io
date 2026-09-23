@@ -9,7 +9,7 @@ import { TikTokLiveService } from './server/tiktokLiveService';
 
 dotenv.config();
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const app = express();
 const server = http.createServer(app);
 
@@ -190,8 +190,39 @@ app.get('/api/tiktok/callback', async (req, res) => {
   }
 });
 
-// Real TikTok Live Webhook with strict idempotency validation
-app.post('/api/tiktok/webhook', (req, res) => {
+// Authenticated Termux -> backend webhook.
+function requireTermuxSecret(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const expected = process.env.TERMUX_WEBHOOK_SECRET || '';
+  const auth = String(req.headers.authorization || '');
+  const supplied = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!expected) return res.status(503).json({ error: 'webhook_not_configured' });
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'unauthorized' });
+  next();
+}
+
+let lastTermuxHeartbeat = 0;
+let termuxLive = false;
+app.post('/api/tiktok/heartbeat', requireTermuxSecret, (req, res) => {
+  lastTermuxHeartbeat = Date.now();
+  termuxLive = req.body?.live === true;
+  console.log('[TERMUX] Heartbeat recebido', { live: termuxLive });
+  res.json({ ok: true, serverTime: Date.now() });
+});
+
+app.get('/api/tiktok/connector-status', (_req, res) => {
+  const age = lastTermuxHeartbeat ? Date.now() - lastTermuxHeartbeat : null;
+  res.json({
+    termuxConnected: age !== null && age < 90000,
+    live: age !== null && age < 90000 ? termuxLive : false,
+    lastHeartbeat: lastTermuxHeartbeat || null,
+    websocketClients: clients.size
+  });
+});
+
+// Real TikTok Live Webhook with authentication + strict idempotency validation
+app.post('/api/tiktok/webhook', requireTermuxSecret, (req, res) => {
   const rawEvent = req.body;
   const result = tiktokService.validateAndProcessEvent(rawEvent);
 
